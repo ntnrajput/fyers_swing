@@ -4,10 +4,13 @@ import os
 import csv
 import time
 import pandas as pd
+import matplotlib.pyplot as plt
+from side_functions import get_support_levels
+
 
 # Configuration
 client_id = "VE3CCLJZWA-100" 
-access_token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOlsiZDoxIiwiZDoyIiwieDowIiwieDoxIiwieDoyIl0sImF0X2hhc2giOiJnQUFBQUFCb1hfdm82UDNuWkE5bzdhMlRoVUkxYU51eEtJNUo1NEFIVzZGQ3NvLUdtR2pHZDQxbG1nR1Z3OVhaUDB6Z1haLVV1YkhGaVdQUkNZT1JzbHpYTVMxNjZYcXN5U01Nc0tRaVRacE41R2pIanNrcTJ3az0iLCJkaXNwbGF5X25hbWUiOiIiLCJvbXMiOiJLMSIsImhzbV9rZXkiOiI5YjViNjVmY2VmMzliNjJjZDlkZjBjZmU4YzhjYmRlMDk3ZDQxYmRkMGRlMmFiNWZlZjgwYWZjYyIsImlzRGRwaUVuYWJsZWQiOiJOIiwiaXNNdGZFbmFibGVkIjoiTiIsImZ5X2lkIjoiWFQwMjYyNCIsImFwcFR5cGUiOjEwMCwiZXhwIjoxNzUxMTU3MDAwLCJpYXQiOjE3NTExMjA4NzIsImlzcyI6ImFwaS5meWVycy5pbiIsIm5iZiI6MTc1MTEyMDg3Miwic3ViIjoiYWNjZXNzX3Rva2VuIn0.RNYwnDVl3dG-Q4yXl4tmc4VUGYPFTnphuLZS3JFfc94"
+access_token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOlsiZDoxIiwiZDoyIiwieDowIiwieDoxIiwieDoyIl0sImF0X2hhc2giOiJnQUFBQUFCb1lMeTdWOVNaWHFJdjdQcVJDTUFYdXg0a2hxUWlVc3pucWVrOHZSWENNbHJwcnBEaVp6aUVwYVlVeEpZVkNUQnJBU2dtSzBma1VnS1ZmSUR0ZkZueXpiUGtGeTR4ZEhQaFRYLVhLSG9LWk9LbThhTT0iLCJkaXNwbGF5X25hbWUiOiIiLCJvbXMiOiJLMSIsImhzbV9rZXkiOiI5YjViNjVmY2VmMzliNjJjZDlkZjBjZmU4YzhjYmRlMDk3ZDQxYmRkMGRlMmFiNWZlZjgwYWZjYyIsImlzRGRwaUVuYWJsZWQiOiJOIiwiaXNNdGZFbmFibGVkIjoiTiIsImZ5X2lkIjoiWFQwMjYyNCIsImFwcFR5cGUiOjEwMCwiZXhwIjoxNzUxMjQzNDAwLCJpYXQiOjE3NTExNzAyMzUsImlzcyI6ImFwaS5meWVycy5pbiIsIm5iZiI6MTc1MTE3MDIzNSwic3ViIjoiYWNjZXNzX3Rva2VuIn0.Q7_Hqx0rCw3uJ1tr_6H8d0Lk9bw6iGtmQXyw4v9_FeI"
 fyers = fyersModel.FyersModel(client_id = client_id, is_async=False, token = access_token, log_path="")
 today = datetime.today().date()
 csv_file = f"{today}.csv"
@@ -19,7 +22,6 @@ last_check = ""
 
 pos = fyers.positions()
 pd.DataFrame(pos.get('netPositions', [])).to_csv(csv_file, index=False)
-
 
 def get_history(symbol, resolution ='5', from_sec = 300, rec_file = history_csv):
     now = int(time.time())
@@ -45,11 +47,8 @@ def get_history(symbol, resolution ='5', from_sec = 300, rec_file = history_csv)
     except Exception as e:
         print(f"History error: {e}")
 
-def get_support_levels():
-    nifty_history = get_history('NSE:NIFTY50-INDEX', '1D', 31536000, 'nifty_history')
-    
-
 get_history('NSE:Nifty50-INDEX','5', 259200)
+get_history('NSE:NIFTY50-INDEX', '1D', 31536000, nifty_history)
 get_support_levels()
 
 def has_open_positions():
