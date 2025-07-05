@@ -1,14 +1,25 @@
-# from fyers_apiv3 import fyersModel
+from fyers_apiv3 import fyersModel
 # from datetime import datetime, timezone, timedelta
-# import os
+import os
 import csv
+import time
 # import time
 import pandas as pd
 import matplotlib.pyplot as plt
+from datetime import datetime, timezone, timedelta
+from concurrent.futures import ThreadPoolExecutor
 # from Algo_1 import get_history
+
+
+client_id = "VE3CCLJZWA-100" 
+access_token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOlsiZDoxIiwiZDoyIiwieDowIiwieDoxIiwieDoyIl0sImF0X2hhc2giOiJnQUFBQUFCb2FUckVsVjQ2OTJBUVR0dnhTeDBTZzZNODhuN1VJbVF1TlFHYUljRHlYQ0RSRFJEXy1Ed2NWMFB6TjVYR2NfNmJNMDJXWDdsblh4cmlmY0VnWlU1TExvejYxTTNrZEhIbHJMTVZMRmw1cXRTS282Zz0iLCJkaXNwbGF5X25hbWUiOiIiLCJvbXMiOiJLMSIsImhzbV9rZXkiOiI5YjViNjVmY2VmMzliNjJjZDlkZjBjZmU4YzhjYmRlMDk3ZDQxYmRkMGRlMmFiNWZlZjgwYWZjYyIsImlzRGRwaUVuYWJsZWQiOiJOIiwiaXNNdGZFbmFibGVkIjoiTiIsImZ5X2lkIjoiWFQwMjYyNCIsImFwcFR5cGUiOjEwMCwiZXhwIjoxNzUxNzYxODAwLCJpYXQiOjE3NTE3MjY3ODgsImlzcyI6ImFwaS5meWVycy5pbiIsIm5iZiI6MTc1MTcyNjc4OCwic3ViIjoiYWNjZXNzX3Rva2VuIn0.QnqlHpUF5l2PfRziFNk0v0BQO3IGx6GDVuUSbVJToac"
+fyers = fyersModel.FyersModel(client_id = client_id, is_async=False, token = access_token, log_path="")
+
 
 nifty_history =f"nifty_history.csv"
 levels = f"nifty_levels.csv"
+history_csv = f"symbol_history.csv"
+
 
 def get_support_levels():
     
@@ -60,6 +71,39 @@ def get_support_levels():
     # plt.grid(True)
     # plt.tight_layout()
     # plt.show()
+
+
+def get_history(symbol, resolution ='1D', from_sec = 86400*30, rec_file = history_csv,i=0):
+    now = int(time.time()) -(86400*30*12*i)
+    past = now - from_sec
+    data = {"symbol": symbol, "resolution": resolution, "date_format": "0", "range_from": str(past), "range_to": str(now), "cont_flag": "1"}
+
+    try:
+        res = fyers.history(data=data)
+        print(f"Received candles: {len(res.get('candles', []))}")
+
+        if res.get('candles'):
+            df = pd.DataFrame(res['candles'], columns=['timestamp', 'open', 'high', 'low', 'close', 'volume'])
+            df['timestamp'] = pd.to_datetime(df['timestamp'], unit='s').dt.tz_localize('UTC').dt.tz_convert('Asia/Kolkata')
+            df['symbol'] = symbol
+            df['ema20'] = df['close'].ewm(span=20, adjust=False).mean()
+            df['ema50'] = df['close'].ewm(span=50, adjust=False).mean()
+            return df
+
+
+            # if os.path.exists(rec_file):
+            #     old = pd.read_csv(rec_file)
+            #     old['timestamp'] = pd.to_datetime(old['timestamp'], utc=True).dt.tz_convert('Asia/Kolkata')
+            #     df = pd.concat([old, df]).drop_duplicates(subset=['timestamp', 'symbol'], keep='last')
+        
+
+            # df.sort_values(by=['symbol', 'timestamp'], inplace=True)  # <-- Add this
+            # df.to_csv(rec_file, index=False)
+            
+    except Exception as e:
+        print(f"History error: {e}")
+
+    return pd.DataFrame()
     
 
 if __name__ == "__main__":
