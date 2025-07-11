@@ -415,7 +415,7 @@ def train_enhanced_model_with_volume(df_all, model_params=None):
     print(volume_features.head(10))
     
     # Plot feature importance
-    plt.figure(figsize=(12, 10))
+    plt.figure(figsize=(12, 10))                        
     sns.barplot(data=feature_importance.head(20), x='importance', y='feature')
     plt.title('Enhanced Feature Importance with Volume Analysis')
     plt.tight_layout()
@@ -655,7 +655,7 @@ def add_enhanced_volume_features(df):
     
     return df
 
-def filter_quality_stocks(df_symbol, min_price=25, min_volume=100000):
+def filter_quality_stocks(df_symbol, min_price=25, min_volume=50000):
     """Filter stocks based on price and volume criteria"""
     # Calculate 50-day average volume and price
     df_symbol['volume_avg_50'] = df_symbol['volume'].rolling(50).mean()

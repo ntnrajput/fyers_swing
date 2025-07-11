@@ -30,16 +30,12 @@ nifty_history =f"nifty_history.csv"
 def update_all_symbol_history():
     """Enhanced history update with error handling"""
     try:
-        # df_symbol = pd.read_csv("all_symbols_history.csv", 
-        #                        usecols=['timestamp', 'open', 'high', 'low', 'close', 'volume', 'symbol', 'ema20', 'ema50'])
         df_symbol = pd.read_parquet("all_symbols_history.parquet", 
                              columns=['timestamp', 'open', 'high', 'low', 'close', 'volume', 'symbol', 'ema20', 'ema50'])
-        
         last_date = pd.to_datetime(df_symbol['timestamp'].iloc[-1]).date()
         symbols = df_symbol['symbol'].unique().tolist()
         today = datetime.today().date()
         df_updated = pd.DataFrame()
-        
         print(f"📊 Updating {len(symbols)} symbols from {last_date} to {today}")
         
         for i, symbol in enumerate(symbols):
@@ -92,7 +88,6 @@ def update_all_symbol_history():
         df_updated['timestamp'] = pd.to_datetime(df_updated['timestamp'], utc=True, errors='coerce')
         df_updated = df_updated.dropna(subset=['timestamp'])
 
-        df_updated.to_csv('all_symbols_history.csv', index=False)
         df_updated.to_parquet("all_symbols_history.parquet", compression='snappy')
 
         print("✅ History update completed successfully!")
@@ -104,10 +99,10 @@ def update_all_symbol_history():
 def check_trade_enhanced(optimize_params=False, use_saved_model=True):
     """Enhanced trade checking with volume analysis and filtering"""
     try:
-        df_symbol = pd.read_csv("all_symbols_history.csv", 
-                               usecols=['timestamp', 'open', 'high', 'low', 'close', 'volume', 'symbol', 'ema20', 'ema50'])
-        symbols = df_symbol['symbol'].unique().tolist()
-        
+        df_symbol = pd.read_parquet("all_symbols_history.parquet")  # No usecols
+        df_symbol = df_symbol[['timestamp', 'open', 'high', 'low', 'close', 'volume', 'symbol', 'ema20', 'ema50']]  # Filter after
+
+        symbols = df_symbol['symbol'].unique().tolist()      
         print(f"🔍 Analyzing {len(symbols)} symbols with enhanced volume analysis...")
         
         full_data = []
@@ -119,7 +114,7 @@ def check_trade_enhanced(optimize_params=False, use_saved_model=True):
                 df = df_symbol[df_symbol['symbol'] == symbol].copy()
                 
                 # Apply quality filters first
-                if not filter_quality_stocks(df, min_price=25, min_volume=100000):
+                if not filter_quality_stocks(df, min_price=25, min_volume=50000):
                     continue
                     
                 filtered_symbols += 1
@@ -132,6 +127,7 @@ def check_trade_enhanced(optimize_params=False, use_saved_model=True):
                 df = generate_swing_labels(df, target_pct=0.05, window=20)
                 df = df.dropna(subset=['target_hit']).reset_index(drop=True)
                 
+
                 if len(df) < 20:
                     continue
                     
@@ -190,7 +186,7 @@ def train_and_save_enhanced_model(df_all):
         print(f"❌ Error in enhanced model training: {e}")
         raise
 
-def get_enhanced_trading_candidates(probability_threshold=0.6, min_price=5, min_volume=100000):
+def get_enhanced_trading_candidates(probability_threshold=0.6, min_price=25, min_volume=50000):
     """Get today's trading candidates with enhanced filtering"""
     try:
         # Load saved enhanced model
@@ -201,9 +197,11 @@ def get_enhanced_trading_candidates(probability_threshold=0.6, min_price=5, min_
         print("✅ Enhanced model loaded successfully")
         
         # Get today's data
-        df_symbol = pd.read_csv("all_symbols_history.csv", 
-                               usecols=['timestamp', 'open', 'high', 'low', 'close', 'volume', 'symbol', 'ema20', 'ema50'])
-        
+    
+        df_symbol = pd.read_parquet("all_symbols_history.parquet")  # No usecols
+        df_symbol = df_symbol[['timestamp', 'open', 'high', 'low', 'close', 'volume', 'symbol', 'ema20', 'ema50']]  # Filter after
+
+
         # Get latest data for each symbol
         df_today = df_symbol.sort_values('timestamp').groupby('symbol').tail(1).copy()
         
@@ -239,18 +237,16 @@ def get_enhanced_trading_candidates(probability_threshold=0.6, min_price=5, min_
         print(f"❌ Error getting enhanced trading candidates: {e}")
         return pd.DataFrame()
 
-
-
 def run_backtest(months_back=6):
     """Run backtest on historical data"""
     try:
         # Load model
-        model = joblib.load("enhanced_swing_model.pkl")
-        scaler = joblib.load("feature_scaler.pkl")
-        features = joblib.load("feature_columns.pkl")
+        model = joblib.load("enhanced_swing_model_with_volume.pkl")
+        scaler = joblib.load("feature_scaler_with_volume.pkl")
+        features = joblib.load("feature_columns_with_volume.pkl")
         
         # Load data
-        df_all = pd.read_csv('processed_data.csv')
+        df_all = pd.read_csv('processed_data_enhanced.csv')
         
         # Define backtest period
         end_date = datetime.now()
