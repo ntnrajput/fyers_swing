@@ -5,7 +5,6 @@ import csv
 import time
 import pandas as pd
 import matplotlib.pyplot as plt
-from side_functions import get_support_levels
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from supporting_functions import (
