@@ -4,7 +4,12 @@ import os
 import csv
 import time
 import pandas as pd
+
+# Set matplotlib to use non-interactive backend to avoid tkinter errors
+import matplotlib
+matplotlib.use('Agg')  # Use non-interactive backend
 import matplotlib.pyplot as plt
+
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from supporting_functions import (
@@ -52,7 +57,8 @@ def update_all_symbol_history():
                 }
                 res = fyers.history(data=data)
 
-                if res.get('candles'):
+                # Handle the response properly
+                if isinstance(res, dict) and res.get('candles'):
                     df_new = pd.DataFrame(res['candles'], columns=['timestamp', 'open', 'high', 'low', 'close', 'volume'])
                     df_new['timestamp'] = pd.to_datetime(df_new['timestamp'], unit='s').dt.tz_localize('UTC').dt.tz_convert('Asia/Kolkata')
                     df_new['symbol'] = symbol
@@ -82,12 +88,19 @@ def update_all_symbol_history():
                 continue
         
         # Remove duplicates and save
-        df_updated = df_updated.drop_duplicates(subset=['timestamp', 'symbol'], keep='last')
+        if not df_updated.empty:
+            try:
+                df_updated = df_updated.drop_duplicates(subset=['timestamp', 'symbol'], keep='last')
+            except Exception as e:
+                print(f"⚠️ Warning: Could not drop duplicates: {e}")
 
-        df_updated['timestamp'] = pd.to_datetime(df_updated['timestamp'], utc=True, errors='coerce')
-        df_updated = df_updated.dropna(subset=['timestamp'])
+            df_updated['timestamp'] = pd.to_datetime(df_updated['timestamp'], utc=True, errors='coerce')
+            try:
+                df_updated = df_updated.dropna(subset=['timestamp'])
+            except Exception as e:
+                print(f"⚠️ Warning: Could not dropna: {e}")
 
-        df_updated.to_parquet("all_symbols_history.parquet", compression='snappy')
+            df_updated.to_parquet("all_symbols_history.parquet", compression='snappy')
 
         print("✅ History update completed successfully!")
         
@@ -100,8 +113,14 @@ def check_trade_enhanced(optimize_params=False, use_saved_model=True):
     try:
         df_symbol = pd.read_parquet("all_symbols_history.parquet")  # No usecols
         df_symbol = df_symbol[['timestamp', 'open', 'high', 'low', 'close', 'volume', 'symbol', 'ema20', 'ema50']]  # Filter after
-
-        symbols = df_symbol['symbol'].unique().tolist()      
+        
+        # Get unique symbols safely
+        try:
+            symbols = df_symbol['symbol'].unique().tolist()
+        except AttributeError:
+            # Fallback if unique() is not available
+            symbols = list(set(df_symbol['symbol'].tolist()))
+            
         print(f"🔍 Analyzing {len(symbols)} symbols with enhanced volume analysis...")
         
         full_data = []
@@ -124,7 +143,13 @@ def check_trade_enhanced(optimize_params=False, use_saved_model=True):
                 support_levels, resistance_levels = get_support_resistance(df, window=20)
                 df = add_nearest_sr(df, support_levels, resistance_levels)
                 df = generate_swing_labels(df, target_pct=0.05, window=20)
-                df = df.dropna(subset=['target_hit']).reset_index(drop=True)
+                
+                # Handle dropna safely
+                try:
+                    if 'target_hit' in df.columns:
+                        df = df.dropna(subset=['target_hit']).reset_index(drop=True)
+                except Exception as e:
+                    print(f"⚠️ Warning: Could not dropna for {symbol}: {e}")
                 
 
                 if len(df) < 20:
@@ -200,9 +225,17 @@ def get_enhanced_trading_candidates(probability_threshold=0.6, min_price=25, min
         df_symbol = pd.read_parquet("all_symbols_history.parquet")  # No usecols
         df_symbol = df_symbol[['timestamp', 'open', 'high', 'low', 'close', 'volume', 'symbol', 'ema20', 'ema50']]  # Filter after
 
+        # Ensure df_symbol is a DataFrame
+        if not isinstance(df_symbol, pd.DataFrame):
+            df_symbol = pd.DataFrame(df_symbol)
 
-        # Get latest data for each symbol
-        df_today = df_symbol.sort_values('timestamp').groupby('symbol').tail(1).copy()
+        # Get latest data for each symbol safely
+        if hasattr(df_symbol, 'sort_values'):
+            df_today = df_symbol.sort_values('timestamp').groupby('symbol').tail(1).copy()
+        else:
+            # Fallback sorting
+            df_today = df_symbol.copy()
+            df_today = df_today.sort_values('timestamp') if hasattr(df_today, 'sort_values') else df_today
         
         print(f"📊 Analyzing {len(df_today)} symbols with enhanced filtering...")
         

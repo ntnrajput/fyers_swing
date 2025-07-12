@@ -5,8 +5,13 @@ from sklearn.model_selection import train_test_split, GridSearchCV, cross_val_sc
 from sklearn.metrics import classification_report, confusion_matrix, roc_auc_score, precision_recall_curve
 from sklearn.preprocessing import StandardScaler
 import joblib
+
+# Set matplotlib to use non-interactive backend to avoid tkinter errors
+import matplotlib
+matplotlib.use('Agg')  # Use non-interactive backend
 import matplotlib.pyplot as plt
 import seaborn as sns
+
 from datetime import datetime, timedelta
 import warnings
 warnings.filterwarnings('ignore')
@@ -326,6 +331,12 @@ class TradingModelOptimizer:
 
 def train_enhanced_model_with_volume(df_all, model_params=None):
     """Train enhanced model with volume features"""
+    
+    # Set matplotlib to use non-interactive backend to avoid tkinter errors
+    import matplotlib
+    matplotlib.use('Agg')  # Use non-interactive backend
+    import matplotlib.pyplot as plt
+    import seaborn as sns
 
     ENHANCED_FEATURE_COLUMNS = [
     # Original candle features
@@ -412,12 +423,17 @@ def train_enhanced_model_with_volume(df_all, model_params=None):
     print(f"\n🔊 Volume Features Importance (Top 10):")
     print(volume_features.head(10))
     
-    # Plot feature importance
-    plt.figure(figsize=(12, 10))                        
-    sns.barplot(data=feature_importance.head(20), x='importance', y='feature')
-    plt.title('Enhanced Feature Importance with Volume Analysis')
-    plt.tight_layout()
-    plt.show()
+    # Plot feature importance and save instead of showing
+    try:
+        plt.figure(figsize=(12, 10))                        
+        sns.barplot(data=feature_importance.head(20), x='importance', y='feature')
+        plt.title('Enhanced Feature Importance with Volume Analysis')
+        plt.tight_layout()
+        plt.savefig('feature_importance_plot.png', dpi=300, bbox_inches='tight')
+        plt.close()  # Close the figure to free memory
+        print("📊 Feature importance plot saved as 'feature_importance_plot.png'")
+    except Exception as e:
+        print(f"⚠️ Could not create feature importance plot: {e}")
     
     # Save model and scaler
     joblib.dump(best_model, "enhanced_swing_model_with_volume.pkl")
