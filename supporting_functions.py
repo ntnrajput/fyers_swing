@@ -323,8 +323,6 @@ class TradingModelOptimizer:
         plt.tight_layout()
         plt.show()
     
-    
-    
 
 def train_enhanced_model_with_volume(df_all, model_params=None):
     """Train enhanced model with volume features"""
